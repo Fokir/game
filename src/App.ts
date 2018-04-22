@@ -12,16 +12,16 @@ export class App {
         this.render.tick((delta)=>{
             let speed = this.keyboard.is('shift') ? 10 : 2;
             if(this.keyboard.is('w')){
-                this.render.baseContainer.y += -1 * speed * delta;
+                this.render.baseContainer.y +=  speed * delta;
             }
             if(this.keyboard.is('s')){
-                this.render.baseContainer.y += speed * delta;
+                this.render.baseContainer.y += -1 *speed * delta;
             }
             if(this.keyboard.is('a')){
-                this.render.baseContainer.x += -1 * speed * delta;
+                this.render.baseContainer.x += speed * delta;
             }
             if(this.keyboard.is('d')){
-                this.render.baseContainer.x += speed * delta;
+                this.render.baseContainer.x += -1 * speed * delta;
             }
         });
     }

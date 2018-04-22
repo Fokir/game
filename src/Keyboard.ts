@@ -3,7 +3,6 @@ export class Keyboard {
     private pressed = {};
 
     constructor(canvas: HTMLCanvasElement) {
-        console.log(canvas);
         canvas.tabIndex = 1;
         
         canvas.addEventListener('keydown', (e)=>{
