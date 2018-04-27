@@ -14,6 +14,14 @@ module.exports = {
         test: /\.tsx?$/,
         use: 'ts-loader',
         exclude: /node_modules/
+      },
+      {
+        test: /\.frag$/,
+        use: 'raw-loader'
+      },
+      {
+        test: /\.vert$/,
+        use: 'raw-loader'
       }
     ]
   },
@@ -28,7 +36,7 @@ module.exports = {
     new webpack.ProvidePlugin({
       Stats: 'stats.js'
     }),
-    new HtmlWebpackPlugin({  
+    new HtmlWebpackPlugin({
       template: './index.html'
     }),
     new CopyWebpackPlugin([

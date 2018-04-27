@@ -1,4 +1,4 @@
-import * as PIXI from 'pixi.js'
+import * as PIXI from 'pixi.js';
 import { ITileset } from './interfaces/IMap';
 
 export class Render {
