@@ -1,8 +1,6 @@
-// import { App } from './App';
-import { Render } from './render/Render';
+import { App } from './App';
 
-// let app = new App();
-// app.loadMap('./maps_json/reborn.json');
-// // app.loadMap('./maps_json/big.json');
-
-let render = new Render();
+let app = new App();
+app.run().then(()=>{
+    console.log('started');
+});

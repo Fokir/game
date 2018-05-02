@@ -1,54 +1,88 @@
-
-import { BaseShader } from '../shaders/base/BaseShader';
+import * as PIXI from 'pixi.js';
+import { EventEmmiter } from '../utils/EventEmmiter';
 
 export class Render {
-    private context: WebGLRenderingContext;
+    public stage = new PIXI.Container();
+    public world = new PIXI.Container();
 
-    private baseShader: BaseShader;
+    private render: PIXI.WebGLRenderer;
+    private event = new EventEmmiter();
+
+    private lastTimeFrame = 0;
+
+    get _render() {
+        return this.render;
+    }
 
     constructor() {
+        PIXI.settings.SCALE_MODE = PIXI.SCALE_MODES.NEAREST;
         const canvas = document.createElement('canvas');
         document.body.appendChild(canvas);
 
         canvas.width = window.innerWidth;
         canvas.height = window.innerHeight;
 
-        this.context = canvas.getContext('webgl', {});
+        this.stage.addChild(this.world);
 
-        this.viewport(window.innerWidth, window.innerHeight);
+        this.render = new PIXI.WebGLRenderer({
+            view: canvas,
+            width: window.innerWidth,
+            height: window.innerHeight,
+        });
 
-        this.shaders();
+        this.initStats();
+
+        this.world.scale.set(2);
     }
 
-    initBuffers() {
-        const squareVerticesBuffer = this.context.createBuffer();
-        this.context.bindBuffer(this.context.ARRAY_BUFFER, squareVerticesBuffer);
-
-        var vertices = [
-            1.0, 1.0, 0.0,
-            -1.0, 1.0, 0.0,
-            1.0, -1.0, 0.0,
-            -1.0, -1.0, 0.0
-        ];
-
-        this.context.bufferData(this.context.ARRAY_BUFFER, new Float32Array(vertices), this.context.STATIC_DRAW);
-
-        return squareVerticesBuffer;
+    getView() {
+        return this.render.view;
     }
 
-    viewport(width: number, height: number) {
-        this.context.viewport(0, 0, width, height);
+    pixiLogo() {
+        const logo = PIXI.Sprite.fromImage('./../../textures/pixi.png');
+        logo.x = window.innerWidth / 2;
+        logo.y = window.innerHeight / 2;
+        logo.anchor.set(0.5, 0.5);
+        this.stage.addChild(logo);
+
+        return new Promise((resolve) => {
+            let unsubscribe = this.event.subscribe('tick', (delta: number) => {
+                logo.alpha = logo.alpha - 0.2 / delta;
+                if (logo.alpha <= 0) {
+                    unsubscribe();
+                    resolve();
+                }
+            });
+        });
     }
 
-    shaders() {
-        this.baseShader = new BaseShader(this.context);
+    initStats() {
+        let stats = new Stats();
+        stats.showPanel(0);
+        document.body.appendChild(stats.dom);
+
+        this.event.subscribe('before', () => {
+            stats.begin();
+        });
+        this.event.subscribe('after', () => {
+            stats.end();
+        });
     }
 
     draw() {
-        this.context.clear(this.context.COLOR_BUFFER_BIT | this.context.DEPTH_BUFFER_BIT);
+        this.render.render(this.stage);
+        requestAnimationFrame((time: number) => {
+            let delta = time - this.lastTimeFrame;
+            this.lastTimeFrame = time;
+            this.event.emit('before', delta);
+            this.event.emit('tick', delta);
+            this.event.emit('after', delta);
+            this.draw();
+        })
+    }
 
-        this.context.bindBuffer(this.context.ARRAY_BUFFER, this.initBuffers());
-        this.context.vertexAttribPointer(this.baseShader.vertexPositionAttribute, 3, this.context.FLOAT, false, 0, 0);
-        this.context.drawArrays(this.context.TRIANGLE_STRIP, 0, 4);
+    tick(callback: (delta: number) => void) {
+        return this.event.subscribe('tick', callback);
     }
 }

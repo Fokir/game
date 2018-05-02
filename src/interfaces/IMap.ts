@@ -42,3 +42,10 @@ export interface IMap {
     type: string;
     version: number
 }
+
+export interface IMapConfig {
+    [key: string]: {
+        name: string;
+        link: string;
+    }
+}

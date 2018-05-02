@@ -1,55 +1,75 @@
-import { Render } from './Render';
-import { IMap } from './interfaces/IMap';
-import * as _ from 'underscore';
-import * as PIXI from 'pixi.js';
 import { Keyboard } from './Keyboard';
+import { mapsConfig } from './config/maps';
+import { Map } from './engine/Map';
+import { Render } from './render/Render';
+import { Player } from './player/Player';
+import { Camera } from './render/Camera';
 
 export class App {
     private render = new Render;
-    private keyboard = new Keyboard(this.render.app.view);
+    private keyboard = new Keyboard(this.render.getView());
+    private camera = new Camera(this.render);
+
+    private mainPlayer = new Player('blue', 'big');
 
     constructor() {
-        this.render.tick((delta)=>{
-            let speed = this.keyboard.is('shift') ? 10 : 2;
-            if(this.keyboard.is('w')){
-                this.render.baseContainer.y +=  speed * delta;
+        this.render.tick((delta) => {
+            this.camera.update(delta);
+            let speed = this.keyboard.is('shift') ? 1 : 0.1;
+            let direction = [0, 0];
+            if (this.keyboard.is('w')) {
+                direction[1]--;
             }
-            if(this.keyboard.is('s')){
-                this.render.baseContainer.y += -1 *speed * delta;
+            if (this.keyboard.is('s')) {
+                direction[1]++;
             }
-            if(this.keyboard.is('a')){
-                this.render.baseContainer.x += speed * delta;
+            if (this.keyboard.is('a')) {
+                direction[0]--;
             }
-            if(this.keyboard.is('d')){
-                this.render.baseContainer.x += -1 * speed * delta;
+            if (this.keyboard.is('d')) {
+                direction[0]++;
             }
+
+            if (direction[0] !== 0 || direction[1] !== 0) {
+                this.mainPlayer.direction = direction;
+                this.mainPlayer.position.x += direction[0] * delta * 0.05;
+                this.mainPlayer.position.y += direction[1] * delta * 0.05;
+                this.mainPlayer.walking = true;
+            } else {
+                this.mainPlayer.walking = false;
+            }
+            
+            this.camera.smooth(this.mainPlayer.position.x + 8, this.mainPlayer.position.y + 8);
         });
+
+        this.mainPlayer.position.set(550, 500);
+
+        this.render.draw();
     }
 
-    loadMap(url: string) {
-        return fetch(url).then((map) => map.json()).then((map: IMap) => {
-            return Promise.all(map.tilesets.map(tileset => this.render.prepareTileset(tileset))).then(textures => {
-                return textures.reduce((source, textures) => _.extend(textures, source), {});
-            }).then(textures => ({ textures, map }));
-        }).then(res => {
-            this.buildMap(res.map, res.textures);
-        });
-    }
+    run() {
+        // return this.render.pixiLogo().then(()=>{
+        return this.level('reborn').then(() => {
+            return this.mainPlayer.prepare().then(() => {
+                this.mainPlayer.attach(this.render.world);
 
-    buildMap(map: IMap, textures: { [key: number]: PIXI.Texture }) {
-        map.layers.forEach((layer) => {
-            let container = new PIXI.Container();
-            layer.data.forEach((id, index) => {
-                if (id !== 0) {
-                    let sprite = new PIXI.Sprite(textures[id]);
-                    sprite.x = (index % map.width) * map.tilewidth;
-                    sprite.y = Math.floor(index / map.width) * map.tileheight;
-                    container.addChild(sprite);
-                }
+                this.render.tick((delta) => {
+                    this.mainPlayer.update();
+                });
             });
-            container.scale.set(1.5, 1.5);
-            container.cacheAsBitmap = true;
-            this.render.baseContainer.addChild(container);
+        });
+        // })
+    }
+
+    level(name: string) {
+        const map = mapsConfig[name];
+        if (!map) {
+            throw new Error(`Map "${name}" not found`);
+        }
+        let mapInstance = new Map(map.link);
+
+        return mapInstance.parse().then(() => {
+            mapInstance.attach(this.render.world);
         });
     }
 }
